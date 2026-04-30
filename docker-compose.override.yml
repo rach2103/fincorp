@@ -1,0 +1,16 @@
+services:
+  airflow-webserver:
+    volumes:
+      - .:/opt/placement
+      - ./ingestion/airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    environment:
+      PYTHONPATH: /opt/placement
+
+  airflow-scheduler:
+    volumes:
+      - .:/opt/placement
+      - ./ingestion/airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    environment:
+      PYTHONPATH: /opt/placement

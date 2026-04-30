@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: public
+    tables:
+      - name: raw_student_profiles
+      - name: raw_realtime_signals
+      - name: raw_institute_placements
+      - name: raw_industry_trends

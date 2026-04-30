@@ -1,0 +1,12 @@
+placement_platform:
+  target: prod
+  outputs:
+    prod:
+      type: postgres
+      host: "{{ env_var('DBT_POSTGRES_HOST', 'postgres') }}"
+      user: "{{ env_var('DBT_POSTGRES_USER', 'placement_user') }}"
+      password: "{{ env_var('DBT_POSTGRES_PASSWORD', 'placement_pass') }}"
+      port: 5432
+      dbname: "{{ env_var('DBT_POSTGRES_DB', 'placement_db') }}"
+      schema: features
+      threads: 4

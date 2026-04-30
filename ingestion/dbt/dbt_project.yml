@@ -1,0 +1,11 @@
+name: placement_platform
+version: "1.0.0"
+config-version: 2
+
+profile: placement_platform
+
+model-paths: ["models"]
+
+models:
+  placement_platform:
+    +materialized: table
