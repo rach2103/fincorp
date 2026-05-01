@@ -37,6 +37,15 @@ const initialProfile = {
   institute_avg_salary: 650000,
 };
 
+const CAREER_SECTORS = {
+  CSE: ["Software Engineering", "Cloud & DevOps", "Cybersecurity"],
+  DS: ["Data Science", "Analytics Consulting", "AI Engineering"],
+  ECE: ["Embedded Systems", "Telecom", "Semiconductor Design"],
+  MBA: ["Business Analytics", "Product Management", "Financial Services"],
+  MECHANICAL: ["Manufacturing", "EV Design", "Operations"],
+  CIVIL: ["Infrastructure", "Urban Planning", "Construction Tech"],
+};
+
 function fallbackPrediction(profile) {
   const logit =
     0.55 * (profile.cgpa - 6) +
@@ -52,6 +61,15 @@ function fallbackPrediction(profile) {
     profile.aptitude_score * 2200 +
     profile.internship_count * 60000;
 
+  const academicBoost = Math.min(Math.max((profile.cgpa - 6.0) / 4.0, 0), 1);
+  const aptitudeBoost = Math.min(Math.max(profile.aptitude_score / 100, 0), 1);
+  const combined = 0.55 * academicBoost + 0.45 * aptitudeBoost;
+  const sectors = CAREER_SECTORS[profile.course.toUpperCase()] || ["Technology Services", "Operations", "Business Analytics"];
+  const career_recommendations = sectors.map((sector, idx) => ({
+    sector,
+    fit_score: Math.round(Math.max(0.35, combined - idx * 0.08) * 100) / 100,
+  }));
+
   return {
     placement_probability,
     risk_score: 1 - placement_probability,
@@ -66,11 +84,7 @@ function fallbackPrediction(profile) {
         { feature: "backlogs", impact: -0.05 },
       ],
     },
-    career_recommendations: [
-      { sector: "Software Engineering", fit_score: 0.82 },
-      { sector: "Cloud & DevOps", fit_score: 0.74 },
-      { sector: "Cybersecurity", fit_score: 0.66 },
-    ],
+    career_recommendations,
   };
 }
 
@@ -120,10 +134,11 @@ function App() {
   }
 
   function updateField(field, value) {
-    setProfile((current) => ({
-      ...current,
-      [field]: value,
-    }));
+    setProfile((current) => {
+      const updated = { ...current, [field]: value };
+      setResult(fallbackPrediction(updated));
+      return updated;
+    });
   }
 
   return (

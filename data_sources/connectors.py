@@ -112,20 +112,52 @@ class RealTimeSignalsConnector:
         return pd.DataFrame(records)
 
 
+RAW_DATA_PATH = os.path.join(os.path.dirname(__file__), "raw", "placementdata.csv")
+
+
 class StudentDataConnector:
     """Fetches core student academic and demographic data."""
 
     def fetch_student_profiles(self, student_ids: Optional[list[str]] = None, n: int = 1000) -> pd.DataFrame:
-        """Fetch student profiles."""
-        logger.info(f"Fetching student profiles (n={n})")
+        """Load student profiles from Kaggle dataset if available, else synthetic."""
+        if os.path.exists(RAW_DATA_PATH):
+            logger.info(f"Loading real data from {RAW_DATA_PATH}")
+            df = pd.read_csv(RAW_DATA_PATH)
+            df = df.rename(columns={
+                "StudentID": "student_id",
+                "CGPA": "cgpa",
+                "Internships": "internship_count",
+                "Projects": "github_repos",
+                "Workshops/Certifications": "certifications_count",
+                "AptitudeTestScore": "aptitude_score",
+                "SoftSkillsRating": "communication_score",
+                "ExtracurricularActivities": "hackathon_participations",
+                "PlacementTraining": "placement_training",
+                "SSC_Marks": "ssc_marks",
+                "HSC_Marks": "hsc_marks",
+                "PlacementStatus": "is_placed",
+            })
+            df["student_id"] = df["student_id"].apply(lambda x: f"STU{int(x):05d}")
+            df["is_placed"] = (df["is_placed"] == "Placed").astype(int)
+            df["hackathon_participations"] = (df["hackathon_participations"] == "Yes").astype(int)
+            df["placement_training"] = (df["placement_training"] == "Yes").astype(int)
+            df["backlogs"] = 0
+            df["loan_required"] = False
+            df["institute_id"] = "INST001"
+            df["github_commits_30d"] = df["github_repos"] * 10
+            df["linkedin_connections"] = 100
+            if student_ids:
+                df = df[df["student_id"].isin(student_ids)]
+            logger.info(f"Loaded {len(df)} real student records")
+            return df
+
+        logger.warning("Real data not found, falling back to synthetic data")
         np.random.seed(42)
         ids = student_ids or [f"STU{i:05d}" for i in range(n)]
         n = len(ids)
-
         courses = ["CSE", "MBA", "ECE", "DS", "Mechanical", "Civil"]
         genders = ["M", "F", "Other"]
-
-        df = pd.DataFrame({
+        return pd.DataFrame({
             "student_id": ids,
             "age": np.random.randint(18, 28, n),
             "gender": np.random.choice(genders, n, p=[0.55, 0.40, 0.05]),
@@ -139,4 +171,3 @@ class StudentDataConnector:
             "family_income_lpa": np.round(np.random.lognormal(12, 0.8, n) / 100000, 2),
             "loan_required": np.random.choice([True, False], n, p=[0.4, 0.6]),
         })
-        return df

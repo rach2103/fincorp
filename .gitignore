@@ -1,1 +1,19 @@
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Env
+.env
+
+# Raw data
+data_sources/raw/
+
+# MLflow & artifacts
+mlruns/
+models/artifacts/
+feature_engineering/artifacts/
