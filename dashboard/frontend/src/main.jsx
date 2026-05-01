@@ -12,6 +12,7 @@ import {
   UserRoundCog,
 } from "lucide-react";
 import "./styles.css";
+import Login from "./Login";
 
 const API_URL = import.meta.env.VITE_API_URL || import.meta.env.REACT_APP_API_URL || "http://localhost:8000";
 
@@ -75,6 +76,7 @@ function fallbackPrediction(profile) {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState(initialProfile);
   const [result, setResult] = useState(fallbackPrediction(initialProfile));
   const [role, setRole] = useState("Institute Staff");
@@ -124,6 +126,10 @@ function App() {
       ...current,
       [field]: value,
     }));
+  }
+
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
   }
 
   return (
