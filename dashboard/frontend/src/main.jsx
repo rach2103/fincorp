@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import Login from "./Login";
 import { createRoot } from "react-dom/client";
 import {
@@ -19,43 +19,44 @@ import "./styles.css";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const CAREER_SECTORS = {
-  CSE: ["Software Engineering", "Cloud & DevOps", "Cybersecurity"],
-  DS: ["Data Science", "Analytics Consulting", "AI Engineering"],
-  ECE: ["Embedded Systems", "Telecom", "Semiconductor Design"],
-  MBA: ["Business Analytics", "Product Management", "Financial Services"],
+  CSE:        ["Software Engineering", "Cloud & DevOps", "Cybersecurity"],
+  DS:         ["Data Science", "Analytics Consulting", "AI Engineering"],
+  ECE:        ["Embedded Systems", "Telecom", "Semiconductor Design"],
+  MBA:        ["Business Analytics", "Product Management", "Financial Services"],
   MECHANICAL: ["Manufacturing", "EV Design", "Operations"],
-  CIVIL: ["Infrastructure", "Urban Planning", "Construction Tech"],
+  CIVIL:      ["Infrastructure", "Urban Planning", "Construction Tech"],
 };
 
-// Convert placement probability (0–1) to estimated months to placement
-// High probability (0.9) → ~2 months, Low probability (0.1) → ~18 months
-function probabilityToMonths(prob) {
-  const clamped = Math.min(Math.max(prob, 0.05), 0.99);
-  // Inverse mapping: months = round(2 + (1 - prob) * 16)
-  return Math.round(2 + (1 - clamped) * 16);
-}
+const MOCK_STUDENTS = [
+  { student_id: "STU00001", name: "Ananya Sharma", course: "CSE",        cgpa: 8.9, internship_count: 2, aptitude_score: 90, communication_score: 4.0, backlogs: 0, certifications_count: 3, institute_avg_placement_rate: 82, institute_avg_salary: 700000, loan_required: true,  family_income_lpa: 4.2, loan_amount: 500000 },
+  { student_id: "STU00002", name: "Rahul Verma",   course: "MBA",        cgpa: 7.5, internship_count: 1, aptitude_score: 75, communication_score: 4.4, backlogs: 1, certifications_count: 1, institute_avg_placement_rate: 74, institute_avg_salary: 620000, loan_required: true,  family_income_lpa: 3.1, loan_amount: 300000 },
+  { student_id: "STU00003", name: "Priya Nair",    course: "DS",         cgpa: 9.1, internship_count: 3, aptitude_score: 95, communication_score: 4.8, backlogs: 0, certifications_count: 5, institute_avg_placement_rate: 88, institute_avg_salary: 750000, loan_required: false, family_income_lpa: 8.0, loan_amount: 0 },
+  { student_id: "STU00004", name: "Karan Mehta",   course: "ECE",        cgpa: 6.8, internship_count: 0, aptitude_score: 60, communication_score: 3.5, backlogs: 3, certifications_count: 0, institute_avg_placement_rate: 65, institute_avg_salary: 550000, loan_required: true,  family_income_lpa: 2.8, loan_amount: 400000 },
+  { student_id: "STU00005", name: "Sneha Iyer",    course: "CSE",        cgpa: 8.2, internship_count: 1, aptitude_score: 82, communication_score: 4.2, backlogs: 0, certifications_count: 2, institute_avg_placement_rate: 80, institute_avg_salary: 680000, loan_required: true,  family_income_lpa: 5.5, loan_amount: 250000 },
+];
 
 function fallbackPrediction(profile) {
   const logit =
     0.55 * (profile.cgpa - 6) +
     0.04 * (profile.aptitude_score - 60) +
     0.18 * (profile.communication_score - 6) +
-    0.4 * profile.internship_count -
+    0.4  * profile.internship_count -
     0.45 * profile.backlogs +
     0.01 * (profile.institute_avg_placement_rate - 75);
   const placement_probability = 1 / (1 + Math.exp(-logit));
 
-  // Realistic fresh-graduate salary: base 3 LPA + CGPA/aptitude/internship bonuses
-  const baseSalary = 300000; // ₹3 LPA base
-  const cgpaBonus = (profile.cgpa - 6) * 60000;         // up to ₹2.4L for 10 CGPA
-  const aptitudeBonus = (profile.aptitude_score - 50) * 1200; // up to ₹0.6L
-  const internshipBonus = profile.internship_count * 50000;   // ₹0.5L per internship
-  const certBonus = profile.certifications_count * 15000;     // ₹0.15L per cert
-  const backlogPenalty = profile.backlogs * 40000;            // penalty for backlogs
-  const salary = Math.max(
-    baseSalary + cgpaBonus + aptitudeBonus + internshipBonus + certBonus - backlogPenalty,
-    200000 // floor at ₹2 LPA
-  );
+  const baseSalary      = 300000;
+  const cgpaBonus       = (profile.cgpa - 6) * 60000;
+  const aptitudeBonus   = (profile.aptitude_score - 50) * 1200;
+  const internshipBonus = profile.internship_count * 50000;
+  const certBonus       = (profile.certifications_count || 0) * 15000;
+  const backlogPenalty  = profile.backlogs * 40000;
+  const salary = Math.max(baseSalary + cgpaBonus + aptitudeBonus + internshipBonus + certBonus - backlogPenalty, 200000);
+
+  const academicBoost = Math.min(Math.max((profile.cgpa - 6.0) / 4.0, 0), 1);
+  const aptitudeBoost = Math.min(Math.max(profile.aptitude_score / 100, 0), 1);
+  const combined = 0.55 * academicBoost + 0.45 * aptitudeBoost;
+  const sectors = CAREER_SECTORS[profile.course.toUpperCase()] || ["Technology Services", "Operations", "Business Analytics"];
 
   return {
     placement_probability,
@@ -65,10 +66,10 @@ function fallbackPrediction(profile) {
     model_source: "local-preview",
     shap_explanation: {
       features: [
-        { feature: "cgpa", impact: 0.11 },
-        { feature: "aptitude_score", impact: 0.08 },
+        { feature: "cgpa",             impact: 0.11 },
+        { feature: "aptitude_score",   impact: 0.08 },
         { feature: "internship_count", impact: 0.06 },
-        { feature: "backlogs", impact: -0.05 },
+        { feature: "backlogs",         impact: -0.05 },
       ],
     },
     career_recommendations: sectors.map((sector, idx) => ({
@@ -129,21 +130,21 @@ function InstituteView() {
   );
 }
 
-// ── Loan Officer: per-student loan decision ──────────────────────────────────
+// ── Loan Officer: per-student loan decision ───────────────────────────────────
 function LoanOfficerView() {
   const loanStudents = MOCK_STUDENTS.filter((s) => s.loan_required);
   const [decisions, setDecisions] = useState({});
-  const [selected, setSelected] = useState(loanStudents[0].student_id);
+  const [selected, setSelected]   = useState(loanStudents[0].student_id);
 
-  const student = loanStudents.find((s) => s.student_id === selected);
-  const pred = fallbackPrediction(student);
+  const student      = loanStudents.find((s) => s.student_id === selected);
+  const pred         = fallbackPrediction(student);
   const monthlySalary = pred.predicted_salary_inr / 12;
-  const monthlyRate = 0.105 / 12;
-  const months = 84;
-  const emi = student.loan_amount > 0
+  const monthlyRate  = 0.105 / 12;
+  const months       = 84;
+  const emi          = student.loan_amount > 0
     ? (student.loan_amount * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1)
     : 0;
-  const ratio = monthlySalary > 0 ? emi / monthlySalary : 1;
+  const ratio        = monthlySalary > 0 ? emi / monthlySalary : 1;
   const autoEligible = student.family_income_lpa >= 2.5 && ratio <= 0.35;
 
   function decide(id, decision) {
@@ -174,7 +175,6 @@ function LoanOfficerView() {
 
       <div className="panel loan-detail">
         <div className="panel-heading"><UserRoundCog size={20} /><h2>Student profile — {student.name}</h2></div>
-
         <div className="profile-grid">
           <div className="profile-field"><span>Student ID</span><strong>{student.student_id}</strong></div>
           <div className="profile-field"><span>Course</span><strong>{student.course}</strong></div>
@@ -195,28 +195,9 @@ function LoanOfficerView() {
           </div>
         </div>
 
-  const metrics = useMemo(
-    () => [
-      {
-        label: "Months to Placement",
-        value: `${probabilityToMonths(result.placement_probability)} mo`,
-        icon: BarChart3,
-      },
-      {
-        label: "Risk Score",
-        value: `${Math.round(result.risk_score * 100)}%`,
-        icon: AlertTriangle,
-      },
-      {
-        label: "Salary Prediction",
-        value: `₹${Math.round(result.predicted_salary_inr / 100000).toLocaleString("en-IN")} LPA`,
-        icon: Banknote,
-      },
         {decisions[student.student_id] ? (
           <div className={`decision-banner ${decisions[student.student_id] === "approved" ? "safe" : "danger"}`}>
-            {decisions[student.student_id] === "approved"
-              ? "✓ Loan Approved"
-              : "✗ Loan Rejected"}
+            {decisions[student.student_id] === "approved" ? "✓ Loan Approved" : "✗ Loan Rejected"}
           </div>
         ) : (
           <div className="decision-actions">
@@ -233,7 +214,7 @@ function LoanOfficerView() {
   );
 }
 
-// ── Loan Calculator (Student only) ─────────────────────────────────────────
+// ── Loan Calculator (Student only) ───────────────────────────────────────────
 function LoanCalculator({ predictedSalary, careerRecommendations }) {
   const LOAN_OPTIONS = {
     India: [
@@ -269,12 +250,12 @@ function LoanCalculator({ predictedSalary, careerRecommendations }) {
   const [loanAmount,  setLoanAmount]  = useState(300000);
   const [rateIndex,   setRateIndex]   = useState(0);
 
-  const rates = LOAN_OPTIONS[destination];
-  const safeIndex = Math.min(rateIndex, rates.length - 1);
+  const rates      = LOAN_OPTIONS[destination];
+  const safeIndex  = Math.min(rateIndex, rates.length - 1);
   const { rate, label } = rates[safeIndex];
-  const monthlyRate   = rate / 12;
-  const monthlySalary = predictedSalary / 12;
-  const maxEmiAmount  = monthlySalary * 0.40;
+  const monthlyRate    = rate / 12;
+  const monthlySalary  = predictedSalary / 12;
+  const maxEmiAmount   = monthlySalary * 0.40;
 
   function emi(months) {
     if (loanAmount <= 0 || monthlyRate === 0) return loanAmount / months;
@@ -357,12 +338,12 @@ function LoanCalculator({ predictedSalary, careerRecommendations }) {
   );
 }
 
-// ── Data Scientist / Student: existing scoring view ──────────────────────────
+// ── Data Scientist / Student: scoring view ────────────────────────────────────
 function ScoringView({ role }) {
   const initial = MOCK_STUDENTS[0];
   const [profile, setProfile] = useState(initial);
-  const [result, setResult] = useState(fallbackPrediction(initial));
-  const [status, setStatus] = useState("Ready");
+  const [result,  setResult]  = useState(fallbackPrediction(initial));
+  const [status,  setStatus]  = useState("Ready");
 
   async function runPrediction(event) {
     event.preventDefault();
@@ -395,8 +376,9 @@ function ScoringView({ role }) {
       <section className="metrics">
         {[
           { label: "Placement Probability", value: `${Math.round(result.placement_probability * 100)}%`, icon: BarChart3 },
-          { label: "Risk Score", value: `${Math.round(result.risk_score * 100)}%`, icon: AlertTriangle },
-          { label: "Salary Prediction", value: `₹${Math.round(result.predicted_salary_inr).toLocaleString("en-IN")}`, icon: Banknote },
+          { label: "Est. Months to Placement", value: `~${Math.round(2 + (1 - Math.min(Math.max(result.placement_probability, 0.05), 0.99)) * 16)} mo`, icon: LineChart },
+          { label: "Risk Score",            value: `${Math.round(result.risk_score * 100)}%`,            icon: AlertTriangle },
+          { label: "Salary Prediction",     value: `₹${Math.round(result.predicted_salary_inr).toLocaleString("en-IN")}`, icon: Banknote },
         ].map(({ label, value, icon: Icon }) => (
           <article className="metric-card" key={label}>
             <Icon size={22} /><span>{label}</span><strong>{value}</strong>
@@ -471,7 +453,7 @@ function ScoringView({ role }) {
   );
 }
 
-// ── Root App ─────────────────────────────────────────────────────────────────
+// ── Root App ──────────────────────────────────────────────────────────────────
 function App() {
   const [role, setRole] = useState(null);
 
@@ -481,9 +463,9 @@ function App() {
 
   const roleContent = {
     "Institute Staff": <InstituteView />,
-    "Loan Officer": <LoanOfficerView />,
-    "Data Scientist": <ScoringView role="Data Scientist" />,
-    "Student User": <ScoringView role="Student User" />,
+    "Loan Officer":    <LoanOfficerView />,
+    "Data Scientist":  <ScoringView role="Data Scientist" />,
+    "Student User":    <ScoringView role="Student User" />,
   };
 
   return (

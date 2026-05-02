@@ -136,7 +136,7 @@ def train_placement_classifier(X_train, X_test, y_train, y_test, log_mlflow: boo
         use_label_encoder=False,
         eval_metric="logloss",
         random_state=42,
-        verbosity=0,
+        verbosity=1,
     )
     xgb.fit(X_train, y_train)
     xgb_proba = xgb.predict_proba(X_test)[:, 1]
