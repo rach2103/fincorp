@@ -27,13 +27,13 @@ const CAREER_SECTORS = {
   CIVIL: ["Infrastructure", "Urban Planning", "Construction Tech"],
 };
 
-const MOCK_STUDENTS = [
-  { student_id: "STU00001", name: "Ananya Sharma", course: "CSE", cgpa: 8.9, internship_count: 2, aptitude_score: 90, communication_score: 4.0, backlogs: 0, institute_avg_placement_rate: 82, institute_avg_salary: 700000, loan_required: true, family_income_lpa: 4.2, loan_amount: 500000 },
-  { student_id: "STU00002", name: "Rahul Verma", course: "MBA", cgpa: 7.5, internship_count: 1, aptitude_score: 75, communication_score: 4.4, backlogs: 1, institute_avg_placement_rate: 74, institute_avg_salary: 620000, loan_required: true, family_income_lpa: 3.1, loan_amount: 300000 },
-  { student_id: "STU00003", name: "Priya Nair", course: "DS", cgpa: 9.1, internship_count: 3, aptitude_score: 95, communication_score: 4.8, backlogs: 0, institute_avg_placement_rate: 88, institute_avg_salary: 750000, loan_required: false, family_income_lpa: 8.0, loan_amount: 0 },
-  { student_id: "STU00004", name: "Karan Mehta", course: "ECE", cgpa: 6.8, internship_count: 0, aptitude_score: 60, communication_score: 3.5, backlogs: 3, institute_avg_placement_rate: 65, institute_avg_salary: 550000, loan_required: true, family_income_lpa: 2.8, loan_amount: 400000 },
-  { student_id: "STU00005", name: "Sneha Iyer", course: "CSE", cgpa: 8.2, internship_count: 1, aptitude_score: 82, communication_score: 4.2, backlogs: 0, institute_avg_placement_rate: 80, institute_avg_salary: 680000, loan_required: true, family_income_lpa: 5.5, loan_amount: 250000 },
-];
+// Convert placement probability (0–1) to estimated months to placement
+// High probability (0.9) → ~2 months, Low probability (0.1) → ~18 months
+function probabilityToMonths(prob) {
+  const clamped = Math.min(Math.max(prob, 0.05), 0.99);
+  // Inverse mapping: months = round(2 + (1 - prob) * 16)
+  return Math.round(2 + (1 - clamped) * 16);
+}
 
 function fallbackPrediction(profile) {
   const logit =
@@ -44,14 +44,19 @@ function fallbackPrediction(profile) {
     0.45 * profile.backlogs +
     0.01 * (profile.institute_avg_placement_rate - 75);
   const placement_probability = 1 / (1 + Math.exp(-logit));
-  const salary =
-    profile.institute_avg_salary * (0.82 + profile.cgpa / 10) +
-    profile.aptitude_score * 2200 +
-    profile.internship_count * 60000;
-  const academicBoost = Math.min(Math.max((profile.cgpa - 6.0) / 4.0, 0), 1);
-  const aptitudeBoost = Math.min(Math.max(profile.aptitude_score / 100, 0), 1);
-  const combined = 0.55 * academicBoost + 0.45 * aptitudeBoost;
-  const sectors = CAREER_SECTORS[profile.course.toUpperCase()] || ["Technology Services", "Operations", "Business Analytics"];
+
+  // Realistic fresh-graduate salary: base 3 LPA + CGPA/aptitude/internship bonuses
+  const baseSalary = 300000; // ₹3 LPA base
+  const cgpaBonus = (profile.cgpa - 6) * 60000;         // up to ₹2.4L for 10 CGPA
+  const aptitudeBonus = (profile.aptitude_score - 50) * 1200; // up to ₹0.6L
+  const internshipBonus = profile.internship_count * 50000;   // ₹0.5L per internship
+  const certBonus = profile.certifications_count * 15000;     // ₹0.15L per cert
+  const backlogPenalty = profile.backlogs * 40000;            // penalty for backlogs
+  const salary = Math.max(
+    baseSalary + cgpaBonus + aptitudeBonus + internshipBonus + certBonus - backlogPenalty,
+    200000 // floor at ₹2 LPA
+  );
+
   return {
     placement_probability,
     risk_score: 1 - placement_probability,
@@ -190,6 +195,23 @@ function LoanOfficerView() {
           </div>
         </div>
 
+  const metrics = useMemo(
+    () => [
+      {
+        label: "Months to Placement",
+        value: `${probabilityToMonths(result.placement_probability)} mo`,
+        icon: BarChart3,
+      },
+      {
+        label: "Risk Score",
+        value: `${Math.round(result.risk_score * 100)}%`,
+        icon: AlertTriangle,
+      },
+      {
+        label: "Salary Prediction",
+        value: `₹${Math.round(result.predicted_salary_inr / 100000).toLocaleString("en-IN")} LPA`,
+        icon: Banknote,
+      },
         {decisions[student.student_id] ? (
           <div className={`decision-banner ${decisions[student.student_id] === "approved" ? "safe" : "danger"}`}>
             {decisions[student.student_id] === "approved"
