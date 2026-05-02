@@ -1,8 +1,4 @@
-"""
-feature_engineering/pipeline.py
-Complete feature engineering pipeline: preprocessing, encoding, scaling,
-feature selection, and training data generation.
-"""
+
 import os
 import pickle
 import numpy as np

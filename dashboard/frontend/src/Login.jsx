@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { Mail, Phone, Lock, ChevronLeft, CheckCircle2, ArrowRight } from "lucide-react";
+import { Mail, Phone, Lock, ChevronLeft, CheckCircle2 } from "lucide-react";
 import "./login.css";
 
-export default function Login({ onLogin }) {
-  // view: "login" | "register" | "forgot"
-  const [view, setView] = useState("login");
-  // method: "email" | "phone"
-  const [method, setMethod] = useState("email");
-  // step: "initial" | "otp" | "password"
-  const [step, setStep] = useState("initial");
+const USERS = {
+  "student@fincorp.com":   { password: "student123",   role: "Student User" },
+  "institute@fincorp.com": { password: "institute123", role: "Institute Staff" },
+  "scientist@fincorp.com": { password: "science123",  role: "Data Scientist" },
+  "loan@fincorp.com":      { password: "loan123",      role: "Loan Officer" },
+};
 
+export default function Login({ onLogin }) {
+  const [view, setView] = useState("login");
+  const [method, setMethod] = useState("email");
+  const [step, setStep] = useState("initial");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [error, setError] = useState("");
 
-  // Reset state when view changes
   useEffect(() => {
     setStep("initial");
     setOtp(["", "", "", "", "", ""]);
@@ -24,24 +27,28 @@ export default function Login({ onLogin }) {
     setSuccessMsg("");
     setIdentifier("");
     setPassword("");
+    setError("");
   }, [view, method]);
 
   const handleSimulatedNetworkRequest = (callback, delay = 1200) => {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      callback();
-    }, delay);
+    setTimeout(() => { setIsLoading(false); callback(); }, delay);
   };
 
   const handleInitialSubmit = (e) => {
     e.preventDefault();
     if (!identifier) return;
+    setError("");
 
     if (view === "login") {
       if (!password) return;
+      const user = USERS[identifier.toLowerCase()];
+      if (!user || user.password !== password) {
+        setError("Invalid email or password.");
+        return;
+      }
       handleSimulatedNetworkRequest(() => {
-        onLogin();
+        onLogin(user.role);
       });
     } else {
       // register or forgot password
@@ -151,6 +158,22 @@ export default function Login({ onLogin }) {
             <span>{successMsg}</span>
           </div>
         )}
+
+        {view === "login" && step === "initial" && (
+          <div className="credentials-hint">
+            <strong>Demo credentials</strong>
+            <table>
+              <tbody>
+                <tr><td>student@fincorp.com</td><td>student123</td></tr>
+                <tr><td>institute@fincorp.com</td><td>institute123</td></tr>
+                <tr><td>scientist@fincorp.com</td><td>science123</td></tr>
+                <tr><td>loan@fincorp.com</td><td>loan123</td></tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {error && <div className="error-banner">{error}</div>}
 
         <form onSubmit={
           step === "initial" ? handleInitialSubmit :
