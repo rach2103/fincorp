@@ -81,10 +81,16 @@ def _fallback_prediction(features: dict) -> tuple[float, float, int]:
         + 0.01 * (features["institute_avg_placement_rate"] - 75)
     )
     placement_probability = 1 / (1 + math.exp(-logit))
-    salary = (
-        features["institute_avg_salary"] * (0.82 + features["cgpa"] / 10)
-        + features["aptitude_score"] * 2200
-        + features["internship_count"] * 60000
+    # Realistic fresh-graduate salary (INR): base 3 LPA + bonuses
+    base_salary = 300_000  # ₹3 LPA
+    cgpa_bonus = (features["cgpa"] - 6) * 60_000          # up to ₹2.4L at CGPA 10
+    aptitude_bonus = max(features["aptitude_score"] - 50, 0) * 1_200
+    internship_bonus = features["internship_count"] * 50_000
+    cert_bonus = features["certifications_count"] * 15_000
+    backlog_penalty = features["backlogs"] * 40_000
+    salary = max(
+        base_salary + cgpa_bonus + aptitude_bonus + internship_bonus + cert_bonus - backlog_penalty,
+        200_000,  # floor at ₹2 LPA
     )
     risk_score = round(float(1 - placement_probability), 4)
     return round(float(placement_probability), 4), round(float(salary), 2), risk_score
@@ -134,8 +140,9 @@ def predict(profile: StudentProfile) -> dict:
     return {
         "student_id": profile.student_id,
         "placement_probability": round(float(placement_probability), 4),
+        "months_to_placement": max(2, round(2 + (1 - float(placement_probability)) * 16)),
         "risk_score": risk_score,
-        "predicted_salary_inr": round(float(min(max(salary, 0), 10000000)), 2),
+        "predicted_salary_inr": round(float(min(max(salary, 200_000), 2_500_000)), 2),
         "early_risk_alert": risk_score >= 0.45,
         "model_source": model_source,
         "shap_explanation": explanation,
