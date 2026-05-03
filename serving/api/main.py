@@ -118,6 +118,133 @@ def health() -> dict:
     return {"status": "ok", "service": "placement-intelligence-api"}
 
 
+@app.post("/suggestions")
+def suggestions(profile: StudentProfile) -> dict:
+    """Return AI-driven skill and exercise suggestions based on student profile."""
+    from compliance.rules import recommend_career_sectors
+
+    course = profile.course.upper()
+    cgpa   = profile.cgpa
+
+    # Rule-based suggestion engine (mirrors DB seed data)
+    SUGGESTIONS = {
+        "CSE": {
+            (8.0, 10.0): [
+                {"skill": "System Design",       "exercise": "Solve 2 system design problems/week on Educative.io",          "category": "technical",  "priority": 1},
+                {"skill": "DSA - Advanced",       "exercise": "Practice Hard LeetCode problems daily (trees, graphs, DP)",    "category": "technical",  "priority": 1},
+                {"skill": "Cloud Certifications", "exercise": "Pursue AWS Solutions Architect or GCP Associate cert",         "category": "technical",  "priority": 1},
+                {"skill": "Open Source",          "exercise": "Contribute to 1 GitHub open source project per month",         "category": "activity",   "priority": 2},
+            ],
+            (6.0, 8.0): [
+                {"skill": "DSA - Intermediate",   "exercise": "Solve 3 Medium LeetCode problems daily",                       "category": "technical",  "priority": 1},
+                {"skill": "Web Development",      "exercise": "Build and deploy a full-stack project (React + Node/Django)",   "category": "technical",  "priority": 1},
+                {"skill": "Communication Skills", "exercise": "Join Toastmasters or practice mock GDs weekly",                "category": "soft_skill", "priority": 2},
+                {"skill": "Aptitude",             "exercise": "Solve 20 IndiaBix aptitude questions daily",                   "category": "technical",  "priority": 2},
+            ],
+            (0.0, 6.0): [
+                {"skill": "DSA - Basics",         "exercise": "Complete NeetCode 150 roadmap from scratch",                   "category": "technical",  "priority": 1},
+                {"skill": "Backlog Clearance",    "exercise": "Dedicate 2 hrs/day to clear pending backlogs first",           "category": "activity",   "priority": 1},
+                {"skill": "Resume Building",      "exercise": "Build a project-based resume with at least 2 live projects",   "category": "activity",   "priority": 2},
+            ],
+        },
+        "DS": {
+            (8.0, 10.0): [
+                {"skill": "ML Engineering",       "exercise": "Build end-to-end ML pipelines using MLflow + FastAPI",         "category": "technical",  "priority": 1},
+                {"skill": "Kaggle Competitions",  "exercise": "Participate in 1 Kaggle competition per month",                "category": "activity",   "priority": 1},
+                {"skill": "Deep Learning",        "exercise": "Complete fast.ai or deeplearning.ai specialization",           "category": "technical",  "priority": 1},
+            ],
+            (0.0, 8.0): [
+                {"skill": "Python & Pandas",      "exercise": "Complete 30 days of Pandas challenges on Kaggle",              "category": "technical",  "priority": 1},
+                {"skill": "Statistics",           "exercise": "Revise hypothesis testing, distributions, regression daily",   "category": "technical",  "priority": 1},
+                {"skill": "SQL",                  "exercise": "Solve 50 SQL problems on Mode Analytics or LeetCode",          "category": "technical",  "priority": 2},
+            ],
+        },
+        "MBA": {
+            (8.0, 10.0): [
+                {"skill": "Case Interviews",      "exercise": "Practice 3 McKinsey/BCG case studies per week",                "category": "technical",  "priority": 1},
+                {"skill": "Financial Modelling",  "exercise": "Build DCF and LBO models in Excel/Google Sheets",              "category": "technical",  "priority": 1},
+                {"skill": "Leadership",           "exercise": "Lead a college club or organise an industry event",            "category": "activity",   "priority": 2},
+            ],
+            (0.0, 8.0): [
+                {"skill": "Group Discussion",     "exercise": "Practice GD topics daily — economy, policy, business news",   "category": "soft_skill", "priority": 1},
+                {"skill": "Excel & PowerPoint",   "exercise": "Complete Excel Skills for Business on Coursera",               "category": "technical",  "priority": 1},
+                {"skill": "Networking",           "exercise": "Connect with 5 alumni on LinkedIn per week",                   "category": "soft_skill", "priority": 2},
+            ],
+        },
+        "ECE": {
+            (8.0, 10.0): [
+                {"skill": "VLSI Design",          "exercise": "Practice Verilog/VHDL on Xilinx Vivado with mini projects",    "category": "technical",  "priority": 1},
+                {"skill": "Embedded C",           "exercise": "Build 3 Arduino/Raspberry Pi projects and publish on GitHub",  "category": "technical",  "priority": 1},
+            ],
+            (0.0, 8.0): [
+                {"skill": "Core Electronics",     "exercise": "Revise op-amps, microcontrollers, communication protocols",    "category": "technical",  "priority": 1},
+                {"skill": "Aptitude & Reasoning", "exercise": "Solve 20 quantitative aptitude questions daily",               "category": "technical",  "priority": 2},
+            ],
+        },
+        "MECHANICAL": {
+            (8.0, 10.0): [
+                {"skill": "CAD/CAM",              "exercise": "Master SolidWorks or CATIA with 2 design projects",            "category": "technical",  "priority": 1},
+                {"skill": "Six Sigma",            "exercise": "Pursue Six Sigma Green Belt certification",                    "category": "technical",  "priority": 1},
+            ],
+            (0.0, 8.0): [
+                {"skill": "AutoCAD",              "exercise": "Complete AutoCAD 2D/3D certification course",                  "category": "technical",  "priority": 1},
+                {"skill": "Core Subjects",        "exercise": "Revise Thermodynamics, FM, SOM daily for 1 hr",                "category": "technical",  "priority": 1},
+            ],
+        },
+        "CIVIL": {
+            (8.0, 10.0): [
+                {"skill": "STAAD Pro / ETABS",    "exercise": "Model and analyse 2 structural projects using STAAD Pro",     "category": "technical",  "priority": 1},
+                {"skill": "Project Management",   "exercise": "Pursue PMP or PRINCE2 Foundation certification",              "category": "technical",  "priority": 1},
+            ],
+            (0.0, 8.0): [
+                {"skill": "AutoCAD Civil 3D",     "exercise": "Complete AutoCAD Civil 3D certification",                     "category": "technical",  "priority": 1},
+                {"skill": "Estimation & Costing", "exercise": "Practice quantity surveying problems daily",                  "category": "technical",  "priority": 2},
+            ],
+        },
+    }
+
+    UNIVERSAL = [
+        {"skill": "Mock Interviews",   "exercise": "Do 2 mock interviews per week on Pramp or Interviewing.io",    "category": "soft_skill", "priority": 1},
+        {"skill": "LinkedIn Profile",  "exercise": "Optimise LinkedIn with projects, skills, and recommendations",  "category": "activity",   "priority": 1},
+        {"skill": "Communication",     "exercise": "Read 1 business article daily and summarise it in writing",     "category": "soft_skill", "priority": 2},
+        {"skill": "Aptitude Practice", "exercise": "Solve 15 aptitude + 5 logical reasoning questions daily",       "category": "technical",  "priority": 2},
+    ]
+
+    # Pick course-specific band
+    course_map = SUGGESTIONS.get(course, {})
+    course_suggestions = []
+    for (lo, hi), items in course_map.items():
+        if lo <= cgpa <= hi:
+            course_suggestions = items
+            break
+
+    # Extra nudges based on weak signals
+    extra = []
+    if profile.internship_count == 0:
+        extra.append({"skill": "Internship", "exercise": "Apply to at least 2 internships on Internshala or LinkedIn this week", "category": "activity", "priority": 1})
+    if profile.certifications_count < 2:
+        extra.append({"skill": "Certifications", "exercise": "Complete 1 free certification on Coursera or Google Career Certificates", "category": "technical", "priority": 1})
+    if profile.communication_score < 6:
+        extra.append({"skill": "Verbal Communication", "exercise": "Practice speaking for 10 min daily using Mirror Talk or record yourself", "category": "soft_skill", "priority": 1})
+    if profile.backlogs > 0:
+        extra.append({"skill": "Academic Recovery", "exercise": f"Clear {profile.backlogs} backlog(s) — dedicate 3 hrs/day to exam prep", "category": "activity", "priority": 1})
+    if profile.aptitude_score < 60:
+        extra.append({"skill": "Quantitative Aptitude", "exercise": "Solve RS Aggarwal chapters: Time & Work, Percentages, Profit & Loss daily", "category": "technical", "priority": 1})
+
+    all_suggestions = sorted(extra + course_suggestions + UNIVERSAL, key=lambda x: x["priority"])
+
+    top_career = recommend_career_sectors(profile.course, profile.cgpa, profile.aptitude_score)
+    best_sector = top_career[0].sector if top_career else "your target sector"
+
+    return {
+        "student_id": profile.student_id,
+        "best_career_path": best_sector,
+        "suggestions": all_suggestions[:8],
+    }
+
+
+
+
 @app.post("/predict")
 def predict(profile: StudentProfile) -> dict:
     features = _profile_features(profile)

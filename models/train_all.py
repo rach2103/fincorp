@@ -191,8 +191,9 @@ def train_all(log_mlflow: bool = True):
     """Run full training pipeline."""
     logger.info("Starting full model training pipeline...")
 
-    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
-    mlflow.set_experiment(os.getenv("MLFLOW_EXPERIMENT_NAME", "placement_prediction"))
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "mlruns"))
+    if log_mlflow:
+        mlflow.set_experiment(os.getenv("MLFLOW_EXPERIMENT_NAME", "placement_prediction"))
 
     from feature_engineering.pipeline import run_pipeline
     X_train, X_test, y_p_train, y_p_test, y_s_train, y_s_test, preprocessor, df_raw = run_pipeline()

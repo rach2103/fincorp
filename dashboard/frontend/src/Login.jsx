@@ -2,23 +2,33 @@ import React, { useState, useEffect } from "react";
 import { Mail, Phone, Lock, ChevronLeft, CheckCircle2 } from "lucide-react";
 import "./login.css";
 
-const USERS = {
+const DEMO_USERS = {
   "student@fincorp.com":   { password: "student123",   role: "Student User" },
   "institute@fincorp.com": { password: "institute123", role: "Institute Staff" },
   "scientist@fincorp.com": { password: "science123",  role: "Data Scientist" },
   "loan@fincorp.com":      { password: "loan123",      role: "Loan Officer" },
 };
 
+const ROLE_OPTIONS = [
+  { label: "Student", value: "Student User" },
+  { label: "Institute", value: "Institute Staff" },
+  { label: "Scientist", value: "Data Scientist" },
+  { label: "Loan", value: "Loan Officer" },
+];
+
 export default function Login({ onLogin }) {
+  const [users, setUsers] = useState(DEMO_USERS);
   const [view, setView] = useState("login");
   const [method, setMethod] = useState("email");
   const [step, setStep] = useState("initial");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [accountRole, setAccountRole] = useState(ROLE_OPTIONS[0].value);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [error, setError] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
 
   useEffect(() => {
     setStep("initial");
@@ -27,12 +37,24 @@ export default function Login({ onLogin }) {
     setSuccessMsg("");
     setIdentifier("");
     setPassword("");
+    setAccountRole(ROLE_OPTIONS[0].value);
     setError("");
+    setVerificationCode("");
   }, [view, method]);
 
   const handleSimulatedNetworkRequest = (callback, delay = 1200) => {
     setIsLoading(true);
     setTimeout(() => { setIsLoading(false); callback(); }, delay);
+  };
+
+  const generateVerificationCode = () => {
+    return String(Math.floor(100000 + Math.random() * 900000));
+  };
+
+  const sendDemoCode = () => {
+    setVerificationCode(generateVerificationCode());
+    setOtp(["", "", "", "", "", ""]);
+    setError("");
   };
 
   const handleInitialSubmit = (e) => {
@@ -42,17 +64,23 @@ export default function Login({ onLogin }) {
 
     if (view === "login") {
       if (!password) return;
-      const user = USERS[identifier.toLowerCase()];
+      const user = users[identifier.toLowerCase()];
       if (!user || user.password !== password) {
         setError("Invalid email or password.");
         return;
       }
       handleSimulatedNetworkRequest(() => {
-        onLogin(user.role);
+        onLogin({
+          role: user.role,
+          identifier: identifier.toLowerCase(),
+          isNewAccount: Boolean(user.isNewAccount),
+          profileComplete: Boolean(user.profileComplete),
+        });
       });
     } else {
       // register or forgot password
       handleSimulatedNetworkRequest(() => {
+        sendDemoCode();
         setStep("otp");
       });
     }
@@ -62,7 +90,13 @@ export default function Login({ onLogin }) {
     e.preventDefault();
     const otpString = otp.join("");
     if (otpString.length < 6) return;
-    
+
+    if (otpString !== verificationCode) {
+      setError("That code does not match. Use the demo code shown below or resend a new one.");
+      return;
+    }
+
+    setError("");
     handleSimulatedNetworkRequest(() => {
       setStep("password");
     });
@@ -74,8 +108,24 @@ export default function Login({ onLogin }) {
 
     handleSimulatedNetworkRequest(() => {
       if (view === "register") {
-        setSuccessMsg("Account created successfully!");
+        setUsers((current) => ({
+          ...current,
+          [identifier.toLowerCase()]: {
+            password,
+            role: accountRole,
+            isNewAccount: true,
+            profileComplete: false,
+          },
+        }));
+        setSuccessMsg("Account created successfully! You can sign in now.");
       } else {
+        setUsers((current) => ({
+          ...current,
+          [identifier.toLowerCase()]: {
+            ...(current[identifier.toLowerCase()] || { role: ROLE_OPTIONS[0].value }),
+            password,
+          },
+        }));
         setSuccessMsg("Password reset successfully!");
       }
       setTimeout(() => {
@@ -85,7 +135,24 @@ export default function Login({ onLogin }) {
   };
 
   const handleOtpChange = (index, value) => {
-    if (value.length > 1) return; // Only 1 digit
+    if (!/^\d*$/.test(value)) return;
+
+    if (value.length > 1) {
+      const pastedDigits = value.slice(0, 6).split("");
+      setOtp((current) => {
+        const nextOtp = [...current];
+        pastedDigits.forEach((digit, offset) => {
+          if (index + offset < nextOtp.length) nextOtp[index + offset] = digit;
+        });
+        return nextOtp;
+      });
+
+      const nextIndex = Math.min(index + pastedDigits.length, 5);
+      const nextInput = document.getElementById(`otp-${nextIndex}`);
+      if (nextInput) nextInput.focus();
+      return;
+    }
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -102,6 +169,14 @@ export default function Login({ onLogin }) {
       const prevInput = document.getElementById(`otp-${index - 1}`);
       if (prevInput) prevInput.focus();
     }
+  };
+
+  const handleResendCode = () => {
+    handleSimulatedNetworkRequest(() => {
+      sendDemoCode();
+      setSuccessMsg("New demo code generated.");
+      setTimeout(() => setSuccessMsg(""), 1800);
+    }, 600);
   };
 
   const renderHeader = () => {
@@ -211,6 +286,24 @@ export default function Login({ onLogin }) {
                 />
               </div>
 
+              {view === "register" && (
+                <div className="input-group">
+                  <label>Account type</label>
+                  <div className="role-options">
+                    {ROLE_OPTIONS.map((role) => (
+                      <button
+                        key={role.value}
+                        type="button"
+                        className={accountRole === role.value ? "active" : ""}
+                        onClick={() => setAccountRole(role.value)}
+                      >
+                        {role.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {view === "login" && (
                 <div className="input-group mt-16">
                   <div className="label-row">
@@ -255,13 +348,18 @@ export default function Login({ onLogin }) {
                   />
                 ))}
               </div>
+
+              <div className="demo-code-banner">
+                <span>Demo verification code</span>
+                <strong>{verificationCode}</strong>
+              </div>
               
               <button type="submit" className="primary-btn" disabled={isLoading}>
                 {isLoading ? <span className="loader" /> : "Verify Code"}
               </button>
               
               <div className="resend-text">
-                Didn't receive the code? <button type="button" className="text-btn">Click to resend</button>
+                Didn't receive the code? <button type="button" className="text-btn" onClick={handleResendCode}>Click to resend</button>
               </div>
             </div>
           )}

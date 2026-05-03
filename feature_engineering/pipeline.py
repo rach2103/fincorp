@@ -31,22 +31,25 @@ TARGET_TIME_TO_PLACEMENT = "days_to_placement"  # for survival model
 
 
 def generate_synthetic_labels(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
-    """Generate synthetic target variables for training (replace with real labels in production)."""
+    """Generate synthetic target variables. Skips is_placed if already present in real data."""
     np.random.seed(seed)
     n = len(df)
 
-    # Placement probability influenced by features
-    placement_logit = (
-        0.5 * (df["cgpa"] - 6) +
-        0.3 * df["aptitude_score"] / 10 +
-        0.2 * df["communication_score"] +
-        0.5 * df.get("internship_count", pd.Series(np.zeros(n))).values +
-        0.3 * (df.get("certifications_count", pd.Series(np.zeros(n))).values > 2).astype(int) -
-        0.4 * df["backlogs"] +
-        np.random.normal(0, 1, n)
-    )
-    placement_prob = 1 / (1 + np.exp(-placement_logit))
-    df[TARGET_PLACEMENT] = (np.random.uniform(0, 1, n) < placement_prob).astype(int)
+    # Only generate placement label if not already in dataset
+    if TARGET_PLACEMENT not in df.columns:
+        placement_logit = (
+            0.5 * (df["cgpa"] - 6) +
+            0.3 * df["aptitude_score"] / 10 +
+            0.2 * df["communication_score"] +
+            0.5 * df.get("internship_count", pd.Series(np.zeros(n))).values +
+            0.3 * (df.get("certifications_count", pd.Series(np.zeros(n))).values > 2).astype(int) -
+            0.4 * df["backlogs"] +
+            np.random.normal(0, 1, n)
+        )
+        placement_prob = 1 / (1 + np.exp(-placement_logit))
+        df[TARGET_PLACEMENT] = (np.random.uniform(0, 1, n) < placement_prob).astype(int)
+    else:
+        logger.info(f"Using real placement labels from dataset (rate: {df[TARGET_PLACEMENT].mean():.2%})")
 
     # Salary influenced by course, CGPA, placement
     base_salary = pd.Series({
@@ -105,6 +108,12 @@ def load_features_from_db() -> pd.DataFrame:
     return df
 
 
+def load_features_from_kaggle() -> pd.DataFrame:
+    """Load and merge both Kaggle datasets via dataset_loader."""
+    from data_sources.dataset_loader import load_combined_dataset
+    return load_combined_dataset(augment=True)
+
+
 def run_pipeline(df: pd.DataFrame = None, save_dir: str = "feature_engineering/artifacts") -> tuple:
     """
     Run the full feature engineering pipeline.
@@ -116,17 +125,23 @@ def run_pipeline(df: pd.DataFrame = None, save_dir: str = "feature_engineering/a
         try:
             df = load_features_from_db()
         except Exception as e:
-            logger.warning(f"Could not load from DB ({e}), generating synthetic data")
-            from data_sources.connectors import StudentDataConnector
-            connector = StudentDataConnector()
-            df = connector.fetch_student_profiles(n=2000)
-            # Add placeholder signal cols
-            for col in ["linkedin_connections", "github_repos", "github_commits_30d",
-                        "certifications_count", "hackathon_participations", "internship_count",
-                        "institute_avg_placement_rate", "institute_avg_salary", "composite_score",
-                        "is_high_achiever", "has_no_backlogs", "has_internship"]:
-                if col not in df.columns:
-                    df[col] = 0
+            logger.warning(f"Could not load from DB ({e}), trying Kaggle datasets")
+            try:
+                df = load_features_from_kaggle()
+                logger.info("Loaded data from Kaggle datasets")
+            except Exception as e2:
+                logger.warning(f"Could not load Kaggle data ({e2}), falling back to synthetic")
+                from data_sources.connectors import StudentDataConnector
+                connector = StudentDataConnector()
+                df = connector.fetch_student_profiles(n=2000)
+
+        # Add placeholder signal cols if missing
+        for col in ["linkedin_connections", "github_repos", "github_commits_30d",
+                    "certifications_count", "hackathon_participations", "internship_count",
+                    "institute_avg_placement_rate", "institute_avg_salary", "composite_score",
+                    "is_high_achiever", "has_no_backlogs", "has_internship"]:
+            if col not in df.columns:
+                df[col] = 0
 
     df = generate_synthetic_labels(df)
     logger.info(f"Placement rate: {df[TARGET_PLACEMENT].mean():.2%}")

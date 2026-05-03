@@ -15,7 +15,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -75,6 +76,21 @@ nav button:hover {
 
 .workspace {
   padding: 28px;
+  position: relative;
+}
+
+.toast-notice {
+  background: #0f766e;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 16px;
+  position: fixed;
+  right: 24px;
+  top: 24px;
+  z-index: 20;
 }
 
 .topbar {
@@ -163,6 +179,27 @@ h2 {
   margin-bottom: 18px;
 }
 
+.secondary-action {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #ccd7e1;
+  border-radius: 8px;
+  color: #0f766e;
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 7px;
+  margin-left: auto;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.secondary-action:hover {
+  background: #ecfdf5;
+  border-color: #99f6e4;
+}
+
 .controls {
   display: grid;
   gap: 15px;
@@ -177,12 +214,18 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   background: #f8fafc;
   border: 1px solid #ccd7e1;
   border-radius: 8px;
   min-height: 40px;
   padding: 8px 10px;
+}
+
+textarea {
+  min-height: 92px;
+  resize: vertical;
 }
 
 input[type="range"] {
@@ -250,6 +293,10 @@ input[type="range"] {
   height: 100%;
 }
 
+.bar-row i.negative {
+  background: #f97316;
+}
+
 .recommendations {
   display: grid;
   gap: 12px;
@@ -297,6 +344,22 @@ input[type="range"] {
   nav {
     grid-template-columns: 1fr;
   }
+
+  .onboarding-grid,
+  .semester-grid,
+  .document-grid,
+  .summary-grid,
+  .meeting-scheduler {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-field {
+    grid-column: span 1;
+  }
+
+  .onboarding-submit {
+    max-width: none;
+  }
 }
 
 /* ── Cohort table ── */
@@ -341,6 +404,11 @@ input[type="range"] {
 .badge.danger {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.badge.warning {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .text-safe { color: #166534; font-weight: 700; }
@@ -412,10 +480,11 @@ input[type="range"] {
 
 .decision-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
-.btn-approve, .btn-reject {
+.btn-approve, .btn-reject, .btn-report {
   align-items: center;
   border: 0;
   border-radius: 8px;
@@ -436,6 +505,18 @@ input[type="range"] {
 .btn-reject {
   background: #dc2626;
   color: white;
+}
+
+.btn-report {
+  background: #f8fafc;
+  border: 1px solid #ccd7e1;
+  color: #0f766e;
+}
+
+.btn-report:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .decision-banner {
@@ -464,12 +545,269 @@ input[type="range"] {
   gap: 6px;
 }
 
+.loan-apply-panel,
+.meeting-card,
+.meeting-scheduler {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e1e8ef;
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.loan-apply-panel div,
+.meeting-card div,
+.meeting-scheduler div {
+  display: grid;
+  gap: 4px;
+}
+
+.loan-apply-panel span,
+.meeting-card span,
+.meeting-scheduler span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.meeting-card {
+  justify-content: flex-start;
+}
+
+.meeting-card .primary {
+  margin-left: auto;
+  padding: 0 14px;
+}
+
+.meeting-scheduler {
+  align-items: end;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr auto;
+}
+
+.meeting-scheduler .primary {
+  padding: 0 14px;
+}
+
+/* ── Student onboarding ── */
+.onboarding-panel {
+  max-width: 1120px;
+}
+
+.onboarding-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.wide-field {
+  grid-column: span 3;
+}
+
+.semester-section {
+  border-bottom: 1px solid #e5eaf0;
+  border-top: 1px solid #e5eaf0;
+  margin: 4px 0 20px;
+  padding: 18px 0;
+}
+
+.semester-section h3 {
+  font-size: 15px;
+  margin: 0 0 14px;
+}
+
+.semester-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.document-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.document-upload {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px dashed #9fb2c3;
+  border-radius: 8px;
+  color: #475569;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  min-height: 118px;
+  padding: 16px;
+  text-align: center;
+}
+
+.document-upload input {
+  display: none;
+}
+
+.document-upload strong {
+  color: #0f766e;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.onboarding-submit {
+  max-width: 260px;
+}
+
+.student-profile-summary {
+  margin-top: 18px;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summary-grid div {
+  background: #f8fafc;
+  border: 1px solid #e1e8ef;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.summary-grid span {
+  color: #6b7280;
+  display: block;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.summary-grid strong {
+  color: #111827;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* ── Data scientist operations ── */
+.ds-grid {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1fr 360px;
+}
+
+.issue-list {
+  display: grid;
+  gap: 12px;
+}
+
+.issue-card {
+  background: #f8fafc;
+  border: 1px solid #e1e8ef;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.issue-card.solved {
+  opacity: 0.72;
+}
+
+.issue-header,
+.issue-meta {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  font-size: 12px;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.issue-card h3 {
+  color: #111827;
+  font-size: 16px;
+  margin: 12px 0 6px;
+}
+
+.issue-card p {
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+
+.resolve-btn {
+  margin-top: 12px;
+  max-width: 170px;
+  min-height: 38px;
+}
+
+.empty-state {
+  background: #f8fafc;
+  border: 1px dashed #ccd7e1;
+  border-radius: 8px;
+  color: #64748b;
+  padding: 24px;
+  text-align: center;
+}
+
+.role-workflow {
+  display: grid;
+  gap: 12px;
+}
+
+.role-workflow article {
+  background: #f8fafc;
+  border: 1px solid #e1e8ef;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.role-workflow strong,
+.role-workflow span {
+  display: block;
+}
+
+.role-workflow span {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
 @media (max-width: 1050px) {
   .loan-layout {
     grid-template-columns: 1fr;
   }
   .profile-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .onboarding-grid,
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wide-field {
+    grid-column: span 2;
+  }
+  .semester-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ds-grid {
+    grid-template-columns: 1fr;
+  }
+  .loan-apply-panel,
+  .meeting-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .meeting-card .primary {
+    margin-left: 0;
+  }
+  .meeting-scheduler {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -599,5 +937,69 @@ input[type="range"] {
   }
   .calc-card.highlight {
     grid-column: span 2;
+  }
+}
+
+/* ── AI Suggestions ── */
+.ai-suggestions {
+  margin-top: 18px;
+}
+
+.suggestions-badge {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  color: #64748b;
+  font-size: 12px;
+  margin-left: auto;
+  padding: 3px 10px;
+}
+
+.suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.suggestion-card {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.suggestion-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.suggestion-header strong {
+  font-size: 13px;
+}
+
+.suggestion-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.suggestion-card p {
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 1200px) {
+  .suggestions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .suggestions-grid {
+    grid-template-columns: 1fr;
   }
 }

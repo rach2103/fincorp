@@ -161,6 +161,36 @@
   box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
 }
 
+.role-options {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.role-options button {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  color: #475569;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+
+.role-options button:hover {
+  border-color: #99f6e4;
+  color: #0f766e;
+}
+
+.role-options button.active {
+  background: #ecfdf5;
+  border-color: #0f766e;
+  color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+}
+
 .input-with-icon {
   position: relative;
   display: flex;
@@ -276,6 +306,29 @@
   background: #ffffff;
   border-color: #0f766e;
   box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
+}
+
+.demo-code-banner {
+  align-items: center;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  color: #065f46;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+}
+
+.demo-code-banner span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.demo-code-banner strong {
+  color: #064e3b;
+  font-size: 18px;
+  letter-spacing: 3px;
 }
 
 .resend-text {
